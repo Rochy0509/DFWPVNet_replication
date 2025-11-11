@@ -1,0 +1,9 @@
+name: 6dpose
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pytorch
+  - pytorch-cuda=12.4
+  - torchaudio
+  - torchvision
