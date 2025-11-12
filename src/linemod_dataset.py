@@ -1,4 +1,4 @@
-import torch 
+import torch
 from torch.utils.data import Dataset
 import cv2
 import numpy as np
@@ -114,7 +114,7 @@ class LINEMODDataset(Dataset):
             # Generate keypoints using FPS
             print("Generating 3D keypoints using FPS...")
             for class_id, class_name in enumerate(class_names, start=1):
-                model_path = os.path.join(models_dir, f'obj_{class_id:02d}.ply')
+                model_path = os.path.join(models_dir, f'obj_{class_id:06d}.ply')
                 
                 if not os.path.exists(model_path):
                     print(f"Warning: Model not found at {model_path}")
@@ -141,55 +141,93 @@ class LINEMODDataset(Dataset):
         return keypoints_3d_dict
     
     def _load_annotations(self):
-        """
-        Load LINEMOD dataset annotations.
-        """
+        """Load LINEMOD dataset annotations in BOP format."""
         annotations = []
-        
-        # LINEMOD class mapping
+
         class_names = [
             'ape', 'benchvise', 'cam', 'can', 'cat', 'driller', 'duck',
             'eggbox', 'glue', 'holepuncher', 'iron', 'lamp', 'phone'
         ]
-        
+
         for class_id, class_name in enumerate(class_names, start=1):
-            class_dir = os.path.join(self.data_dir, f'{class_id:02d}')
-            
+
+            # Load split file to get frame IDs for this class
+            split_file = os.path.join(self.data_dir, f'{class_id:06d}_{self.split}.txt')
+
+            if not os.path.exists(split_file):
+                print(f"Warning: Split file not found: {split_file}")
+                continue
+
+            with open(split_file, 'r') as f:
+                split_lines = f.readlines()
+
+            # BOP format: real/{class_id}/rgb/{frame_id}.png
+            frame_ids = []
+            for line in split_lines:
+                line = line.strip()
+                if line:
+                    # Extract frame_id from path like "real/000001/rgb/000013.png"
+                    parts = line.split('/')
+                    if len(parts) >= 4:
+                        frame_filename = parts[-1]  # "000013.png"
+                        frame_id = int(frame_filename.split('.')[0])  # 13
+                        frame_ids.append(frame_id)
+
+            if not frame_ids:
+                print(f"Warning: No frames found for class {class_id} in {self.split} split")
+                continue
+
+            # Load ground truth poses and camera info from BOP JSON files
+            class_dir = os.path.join(self.data_dir, 'real', f'{class_id:06d}')
+
             if not os.path.exists(class_dir):
                 print(f"Warning: Class directory not found: {class_dir}")
                 continue
-            
-            # Load ground truth poses
-            gt_path = os.path.join(class_dir, 'gt.yml')
+
+            gt_path = os.path.join(class_dir, 'scene_gt.json')
+            camera_path = os.path.join(class_dir, 'scene_camera.json')
+
+            if not os.path.exists(gt_path) or not os.path.exists(camera_path):
+                print(f"Warning: scene_gt.json or scene_camera.json not found at {class_dir}")
+                continue
+
             with open(gt_path, 'r') as f:
-                gt_data = yaml.safe_load(f)
-            
-            # Load camera intrinsics
-            info_path = os.path.join(class_dir, 'info.yml')
-            with open(info_path, 'r') as f:
-                info_data = yaml.safe_load(f)
-            
-            # Process each frame
+                gt_data = json.load(f)
+
+            with open(camera_path, 'r') as f:
+                camera_data = json.load(f)
+
+            # Process each frame in the split
             rgb_dir = os.path.join(class_dir, 'rgb')
-            mask_dir = os.path.join(class_dir, 'mask')
-            
-            for frame_id in gt_data.keys():
-                # Get pose for this frame
-                pose_data = gt_data[frame_id][0]  # First object in frame
+            mask_dir = os.path.join(class_dir, 'mask_visib')
+
+            for frame_id in frame_ids:
+                frame_key = str(frame_id)
+
+                if frame_key not in gt_data or frame_key not in camera_data:
+                    continue
+
+                # Get pose for this frame (first object in list)
+                pose_data = gt_data[frame_key][0]
                 R = np.array(pose_data['cam_R_m2c']).reshape(3, 3)
                 T = np.array(pose_data['cam_t_m2c']) / 1000.0  # Convert mm to meters
-                
+
                 # Get camera intrinsics
-                K = np.array(info_data[frame_id]['cam_K']).reshape(3, 3)
-                
+                K = np.array(camera_data[frame_key]['cam_K']).reshape(3, 3)
+
                 # Construct paths
-                image_path = os.path.join(rgb_dir, f'{frame_id:04d}.png')
-                mask_path = os.path.join(mask_dir, f'{frame_id:04d}.png')
-                
+                image_path = os.path.join(rgb_dir, f'{frame_id:06d}.png')
+                # Mask format: {frame_id:06d}_{instance_id:06d}.png
+                mask_path = os.path.join(mask_dir, f'{frame_id:06d}_000000.png')
+
                 # Check if files exist
-                if not os.path.exists(image_path) or not os.path.exists(mask_path):
+                if not os.path.exists(image_path):
+                    print(f"Warning: Image not found: {image_path}")
                     continue
-                
+                if not os.path.exists(mask_path):
+                    print(f"Warning: Mask not found: {mask_path}")
+                    continue
+
                 annotations.append({
                     'image_path': image_path,
                     'mask_path': mask_path,
@@ -200,6 +238,6 @@ class LINEMODDataset(Dataset):
                     'class_name': class_name,
                     'frame_id': frame_id
                 })
-        
+
         print(f"Loaded {len(annotations)} annotations from LINEMOD dataset")
         return annotations

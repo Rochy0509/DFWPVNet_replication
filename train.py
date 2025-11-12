@@ -51,7 +51,7 @@ def main():
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
     
     # Data
-    data_dir = 'path/to/LINEMOD'  # UPDATE THIS
+    data_dir = 'dataset/linemod/linemod'  # UPDATE THIS
     train_dataset = LINEMODDataset(data_dir, split='train')
     train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=4)
     

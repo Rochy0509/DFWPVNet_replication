@@ -2,8 +2,8 @@ import torch
 import cv2
 import numpy as np
 from src.dfwpvnet import DFWPVNet
-from inference.keypoint_localizer import KeypointLocalizer
-from inference.pose_estimator import PoseEstimator
+from src.inference.keypoint_localizer import KeypointLocalizer 
+from src.inference.pose_estimator import PoseEstimator 
 
 def inference_single_image(model, image_path, keypoints_3d, camera_K, 
                            device='cuda'):
