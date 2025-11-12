@@ -1,5 +1,4 @@
-import numpy as np
-import open3d as o3d  
+import numpy as np  
 import trimesh  
 
 def farthest_point_sampling(points, num_samples):
@@ -30,25 +29,14 @@ def farthest_point_sampling(points, num_samples):
     return sampled_points, sampled_indices
 
 def load_3d_model(model_path):
-    """
-    Load 3D model from PLY or OBJ file.
-    """
-    if model_path.endswith('.ply'):
-        # Option 1: Using Open3D
-        mesh = o3d.io.read_triangle_mesh(model_path)
-        points = np.asarray(mesh.vertices)
-        
-        # Option 2: Using trimesh (alternative)
-        # mesh = trimesh.load(model_path)
-        # points = mesh.vertices
-        
-    elif model_path.endswith('.obj'):
-        mesh = trimesh.load(model_path)
-        points = mesh.vertices
-    else:
-        raise ValueError(f"Unsupported file format: {model_path}")
-    
-    return points
+    """Load 3D model using trimesh only"""
+    try:
+        mesh = trimesh.load(model_path, force='mesh')
+        points = np.array(mesh.vertices)
+        print(f"Loaded {len(points)} vertices from {model_path}")
+        return points
+    except Exception as e:
+        raise RuntimeError(f"Failed to load 3D model: {e}")
 
 def generate_keypoints_from_model(model_path, num_keypoints=8, include_center=True):
     """

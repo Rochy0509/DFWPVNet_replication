@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
-from backbone import ResNet18Backbone
-from unet_decoder import UNetDecoder
-from mask_head import MaskHead
-from vector_field_head import VectorFieldHead  
-from potential_field_head import PotentialFieldHead 
+from .backbone import ResNet18Backbone
+from .unet_decoder import UNetDecoder
+from .mask_head import MaskHead
+from .vector_field_head import VectorFieldHead  
+from .potential_field_head import PotentialFieldHead
 
 class DFWPVNet(nn.Module):
     """

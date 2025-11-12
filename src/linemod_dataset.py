@@ -5,21 +5,24 @@ import numpy as np
 import os
 import json
 import yaml
-from ground_truth_generator import generate_potential_field, generate_vector_field
-from keypoint_selector import generate_keypoints_from_model
+from .ground_truth_generator import generate_potential_field, generate_vector_field
+from .keypoint_selector import generate_keypoints_from_model
 
 class LINEMODDataset(Dataset):
     
-    def __init__(self, data_dir, split='train', num_keypoints=9, transform = None):
+    def __init__(self, data_dir, split='train', num_keypoints=9, transform=None):
         self.data_dir = data_dir
         self.split = split
         self.K = num_keypoints
+        self.transform = transform
+
+        # Load 3D keypoints for each class
+        self.keypoints_3d_dict = self._load_3d_keypoints()
 
         # Load annotations
         self.annotations = self._load_annotations()
-
-        # Load 3D keypoints for each class
-        self.keypoints_3d = self._load_3d_keypoints()
+        
+        print(f"Loaded {len(self.annotations)} samples for {split} split")
 
     def __len__(self):
         return len(self.annotations)
@@ -32,12 +35,12 @@ class LINEMODDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         #Load mask
-        mask = cv2.imread(ann['image_path'])
+        mask = cv2.imread(ann['mask_path'], cv2.IMREAD_GRAYSCALE)
         mask = (mask > 0).astype(np.float32)
 
         #Project 3D keypoints to 2D
         keypoints_2d = self._project_keypoints(
-            ann['pose_R'], ann['pose_T'], ann['camera_K']
+            ann['pose_R'], ann['pose_T'], ann['camera_K'], ann['class_id']
         )
 
         # Generate ground truth
@@ -52,13 +55,15 @@ class LINEMODDataset(Dataset):
             'image': image,
             'mask': mask,
             'vertex': gt_vertex,
-            'potential': gt_potential
+            'potential': gt_potential,
+            'keypoints_2d': torch.from_numpy(keypoints_2d).float(),
+            'class_id': ann['class_id']
         }
     
-    def _project_keypoints(self, R, T, K):
+    def _project_keypoints(self, R, T, K, class_id):
 
         #Get 3D keypoints for this object class
-        keypoints_3d = self.keypoints_3d
+        keypoints_3d = self.keypoints_3d_dict[class_id]
 
         #Ensure T is [3, 1]
         if T.ndim == 1:
