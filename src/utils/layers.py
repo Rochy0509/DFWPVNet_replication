@@ -25,14 +25,15 @@ class BasicBlock(nn.Module):
         #Rectified linear activiation unit (ReLU)
         self.relu = nn.ReLU(inplace=True)
         #second convolutional layer
-        self.conv2 = Conv3x3(out_channel, out_channel, stride)
+        self.conv2 = Conv3x3(out_channel, out_channel, 1)
         #second batch norm
         self.bn2 = nn.BatchNorm2d(out_channel)
 
         #downsample
-        self.downsample = (nn.Sequential(nn.Conv2d(in_channel, out_channel, stride, bias=False),
-                                         nn.BatchNorm2d(out_channel))
-                                         if (stride != 1 or in_channel != out_channel) else nn.Identity())
+        self.downsample = (nn.Sequential(nn.Conv2d(in_channel, out_channel, 
+                                            kernel_size=1, stride=stride, bias=False),
+                                    nn.BatchNorm2d(out_channel))
+                    if (stride != 1 or in_channel != out_channel) else nn.Identity())
         
     def forward(self, x):
         """Forward pass of the basic block"""

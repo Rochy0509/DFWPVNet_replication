@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-class PotentialField(nn.Module):
+class PotentialFieldHead(nn.Module):
     """Predicts potential weights based on data field theory"""
 
     def __init__(self, in_channels=32, num_keypoints=9, use_sigmoid=True):

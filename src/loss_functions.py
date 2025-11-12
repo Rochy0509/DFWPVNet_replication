@@ -1,4 +1,3 @@
-import torch 
 import torch.nn as nn 
 import torch.nn.functional as F
 
@@ -22,8 +21,8 @@ class DFWPVNetLoss(nn.Module):
         #Mask loss: Cross-entropy
         self.mask_loss = nn.CrossEntropyLoss()
 
-        #Vertex & Potential: Smooth L1
-        self.smoot_l1 = nn.SmoothL1Loss(reduction='mean')
+        #Vertex & Potential: smoothh L1
+        self.smooth_l1 = nn.SmoothL1Loss(reduction='mean')
     
     def forward(self, pred_mask, pred_vertex, pred_potential, 
                 gt_mask, gt_vertex, gt_potential):
@@ -41,13 +40,13 @@ class DFWPVNetLoss(nn.Module):
 
         #Vertex loss  (only on object pixels)
         mask_obj = (gt_mask > 0).unsqueeze(1).float()
-        loss_vertex = self.smoot_l1(
+        loss_vertex = self.smooth_l1(
             pred_vertex * mask_obj,
             gt_vertex * mask_obj
         )
 
         #Potential loss (only on object pixels)
-        loss_potential = self.smoot_l1(
+        loss_potential = self.smooth_l1(
             pred_potential * mask_obj, 
             gt_potential * mask_obj
         )

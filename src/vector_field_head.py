@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-class VectorField(nn.Module):
+class VectorFieldHead(nn.Module):
     """Predicts unit vectors from each pixel to K keypoints"""
 
     def __init__(self, in_channels=32, num_keypoints=9):
